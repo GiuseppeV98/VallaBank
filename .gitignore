@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Java
+target/
+*.class
+
+# Node
+node_modules/
+dist/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Docker/PostgreSQL local data
+postgres-data/
