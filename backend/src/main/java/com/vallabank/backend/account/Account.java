@@ -8,6 +8,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 @Entity
 @Table(name = "accounts")
 public class Account {
@@ -27,7 +30,8 @@ public class Account {
     @Column(name = "account_type", nullable = false, length = 20)
     private String accountType;
 
-    @Column(nullable = false, length = 3)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(nullable = false, length = 3, columnDefinition = "CHAR(3)")
     private String currency;
 
     @Column(nullable = false, precision = 19, scale = 2)
