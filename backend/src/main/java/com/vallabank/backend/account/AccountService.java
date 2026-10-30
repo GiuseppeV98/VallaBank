@@ -23,12 +23,12 @@ public class AccountService {
 
     public Account createAccount(UUID customerId, String iban) {
         if (accountRepository.existsByIban(iban)) {
-            throw new IllegalArgumentException("IBAN already exists");
+            throw new DuplicateIbanException();
         }
 
         Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
-
+        .orElseThrow(CustomerNotFoundException::new);
+        
         Account account = new Account(customer, iban);
 
         return accountRepository.save(account);
