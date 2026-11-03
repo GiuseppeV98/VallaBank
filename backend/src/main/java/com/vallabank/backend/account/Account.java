@@ -113,4 +113,18 @@ public class Account {
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
+    
+public void deposit(BigDecimal amount) {
+
+    if (amount == null || amount.signum() <= 0 || amount.scale() > 2) {
+        throw new IllegalArgumentException("Invalid deposit amount");
+    }
+
+    if (!"ACTIVE".equals(status)) {
+        throw new IllegalStateException("Account is not active");
+    }
+
+    this.balance = this.balance.add(amount).setScale(2);
+}
+
 }
