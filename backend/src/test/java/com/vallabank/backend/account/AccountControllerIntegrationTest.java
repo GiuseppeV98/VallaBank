@@ -62,11 +62,7 @@ void getAccountByIdReturns200WhenExists() throws Exception {
 
 
     // 2. Creiamo un Account associato al Customer
-    String iban = "IT" + UUID.randomUUID()
-            .toString()
-            .replace("-", "")
-            .substring(0, 25)
-            .toUpperCase();
+    String iban = "IT10X0542811101000000000002";
 
     String accountJson = """
             {
@@ -126,13 +122,8 @@ void createAccountReturns409WhenIbanAlreadyExists() throws Exception {
 
     String customerId = JsonPath.read(customerResponse, "$.id");
 
-
-    // 2. Prepariamo i dati del conto
-    String iban = "IT" + UUID.randomUUID()
-            .toString()
-            .replace("-", "")
-            .substring(0, 25)
-            .toUpperCase();
+// 2. Prepariamo i dati del conto
+String iban = "IT37X0542811101000000000001";
 
     String accountJson = """
             {
@@ -167,11 +158,7 @@ void createAccountReturns404WhenCustomerMissing() throws Exception {
     UUID missingCustomerId = UUID.randomUUID();
 
     // 2. Generiamo un IBAN di prova casuale
-    String iban = "IT" + UUID.randomUUID()
-            .toString()
-            .replace("-", "")
-            .substring(0, 25)
-            .toUpperCase();
+    String iban = "IT80X0542811101000000000003";
 
     // 3. Prepariamo il JSON della richiesta
     String accountJson = """
@@ -190,4 +177,68 @@ void createAccountReturns404WhenCustomerMissing() throws Exception {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.error").value("Customer not found"));
 }
+
+@Test
+void createAccountReturns400WhenCustomerIdMissing() throws Exception {
+    mockMvc.perform(post("/api/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                    {
+                        "iban": "IT60X0542811101000000123456"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+}
+
+@Test
+void createAccountReturns400WhenIbanMissing() throws Exception {
+    mockMvc.perform(post("/api/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                    {
+                        "customerId": "cfa2453a-0ee3-4312-ac7a-c2838a648d1c"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+}
+
+@Test
+void createAccountReturns400WhenIbanBlank() throws Exception {
+    mockMvc.perform(post("/api/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                    {
+                        "customerId": "cfa2453a-0ee3-4312-ac7a-c2838a648d1c",
+                        "iban": "   "
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+}
+
+@Test
+void createAccountReturns400WhenIbanFormatInvalid() throws Exception {
+    mockMvc.perform(post("/api/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                    {
+                        "customerId": "cfa2453a-0ee3-4312-ac7a-c2838a648d1c",
+                        "iban": "123456"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+}
+
+@Test
+void createAccountReturns400WhenIbanChecksumInvalid() throws Exception {
+    mockMvc.perform(post("/api/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                    {
+                        "customerId": "cfa2453a-0ee3-4312-ac7a-c2838a648d1c",
+                        "iban": "IT61X0542811101000000123456"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+}
+
 }
