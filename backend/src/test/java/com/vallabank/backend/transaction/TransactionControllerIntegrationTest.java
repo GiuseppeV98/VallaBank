@@ -116,4 +116,113 @@ class TransactionControllerIntegrationTest {
         )
                 .andExpect(status().isNotFound());
     }
+
+@Test
+void withdrawalReturns201AndUpdatesBalance() throws Exception {
+
+    String accountId = createAccountForWithdrawal();
+
+    // Depositiamo 100 euro
+    mockMvc.perform(post("/api/accounts/{id}/deposits", accountId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":100.00}"))
+            .andExpect(status().isCreated());
+
+    // Preleviamo 40 euro
+    String response = mockMvc.perform(
+            post("/api/accounts/{id}/withdrawals", accountId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\":40.00}")
+    )
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.type").value("WITHDRAWAL"))
+            .andExpect(jsonPath("$.amount").value(40.0))
+            .andExpect(jsonPath("$.balanceAfter").value(60.0))
+            .andReturn().getResponse().getContentAsString();
+
+    // Controlliamo il saldo
+    mockMvc.perform(get("/api/accounts/{id}", accountId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.balance").value(60.0));
+
+    // Controlliamo il movimento registrato
+    String transactionId = JsonPath.read(response, "$.transactionId");
+
+    assertTrue(transactionRepository.findById(
+            UUID.fromString(transactionId)
+    ).isPresent());
+}
+
+@Test
+void withdrawalReturns409WhenInsufficientFunds() throws Exception {
+
+    String accountId = createAccountForWithdrawal();
+
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", accountId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":50.00}"))
+            .andExpect(status().isConflict());
+
+    // Il saldo deve essere rimasto invariato
+    mockMvc.perform(get("/api/accounts/{id}", accountId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.balance").value(0.0));
+}
+
+@Test
+void withdrawalReturns400WhenAmountInvalid() throws Exception {
+
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", UUID.randomUUID())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":-10.00}"))
+            .andExpect(status().isBadRequest());
+}
+
+@Test
+void withdrawalReturns404WhenAccountMissing() throws Exception {
+
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", UUID.randomUUID())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":20.00}"))
+            .andExpect(status().isNotFound());
+}
+
+private String createAccountForWithdrawal() throws Exception {
+
+    String customerJson = """
+            {
+                "firstName": "Withdrawal",
+                "lastName": "Test",
+                "email": "withdrawal-%s@example.com"
+            }
+            """.formatted(UUID.randomUUID());
+
+    String customerResponse = mockMvc.perform(
+            post("/api/customers")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(customerJson)
+    )
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+
+    String customerId = JsonPath.read(customerResponse, "$.id");
+
+    String accountJson = """
+            {
+                "customerId": "%s",
+                "iban": "IT37X0542811101000000000001"
+            }
+            """.formatted(customerId);
+
+    String accountResponse = mockMvc.perform(
+            post("/api/accounts")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(accountJson)
+    )
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+
+    return JsonPath.read(accountResponse, "$.id");
+}
+
 }

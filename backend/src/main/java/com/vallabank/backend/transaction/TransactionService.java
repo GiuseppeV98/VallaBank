@@ -75,4 +75,62 @@ public class TransactionService {
                 transaction.getCreatedAt()
         );
     }
+    
+@Transactional
+public WithdrawalResponse withdraw(UUID accountId, BigDecimal amount) {
+
+    // 1. Validazione dell'importo
+    if (amount == null || amount.signum() <= 0 || amount.scale() > 2) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Invalid withdrawal amount"
+        );
+    }
+
+    // 2. Recupero del conto
+    Account account = accountRepository.findById(accountId)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Account not found"
+            ));
+
+    // 3. Controllo dello stato
+    if (!"ACTIVE".equals(account.getStatus())) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Account is not active"
+        );
+    }
+
+    // 4. Verifica disponibilità del saldo
+    if (account.getBalance().compareTo(amount) < 0) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Insufficient funds"
+        );
+    }
+
+    // 5. Sottrazione dell'importo
+    account.withdraw(amount);
+
+    // 6. Creazione e registrazione del movimento
+    AccountTransaction transaction = AccountTransaction.withdrawal(
+            account,
+            amount,
+            account.getBalance()
+    );
+
+    transactionRepository.save(transaction);
+
+    // 7. Preparazione della risposta
+    return new WithdrawalResponse(
+            transaction.getId(),
+            account.getId(),
+            transaction.getTransactionType(),
+            transaction.getAmount(),
+            transaction.getBalanceAfter(),
+            transaction.getCreatedAt()
+    );
+}
+
 }

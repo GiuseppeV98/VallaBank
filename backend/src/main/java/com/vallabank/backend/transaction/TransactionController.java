@@ -19,6 +19,7 @@ public class TransactionController {
         this.transactionService = transactionService;
     }
 
+    // DEPOSITO
     @PostMapping("/{id}/deposits")
     public ResponseEntity<DepositResponse> deposit(
             @PathVariable UUID id,
@@ -26,6 +27,23 @@ public class TransactionController {
     ) {
 
         DepositResponse response = transactionService.deposit(
+                id,
+                request.amount()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+    // PRELIEVO
+    @PostMapping("/{id}/withdrawals")
+    public ResponseEntity<WithdrawalResponse> withdraw(
+            @PathVariable UUID id,
+            @Valid @RequestBody WithdrawalRequest request
+    ) {
+
+        WithdrawalResponse response = transactionService.withdraw(
                 id,
                 request.amount()
         );

@@ -126,5 +126,21 @@ public void deposit(BigDecimal amount) {
 
     this.balance = this.balance.add(amount).setScale(2);
 }
+public void withdraw(BigDecimal amount) {
+
+    if (amount == null || amount.signum() <= 0 || amount.scale() > 2) {
+        throw new IllegalArgumentException("Invalid withdrawal amount");
+    }
+
+    if (!"ACTIVE".equals(status)) {
+        throw new IllegalStateException("Account is not active");
+    }
+
+    if (this.balance.compareTo(amount) < 0) {
+        throw new IllegalStateException("Insufficient funds");
+    }
+
+    this.balance = this.balance.subtract(amount).setScale(2);
+}
 
 }

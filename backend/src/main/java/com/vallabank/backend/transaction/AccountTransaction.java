@@ -37,16 +37,39 @@ public class AccountTransaction {
     protected AccountTransaction() {
     }
 
-    public AccountTransaction(
-            Account account,
-            BigDecimal amount,
-            BigDecimal balanceAfter
-    ) {
-        this.account = account;
-        this.transactionType = "DEPOSIT";
-        this.amount = amount;
-        this.balanceAfter = balanceAfter;
-    }
+public AccountTransaction(
+        Account account,
+        BigDecimal amount,
+        BigDecimal balanceAfter
+) {
+    this(account, "DEPOSIT", amount, balanceAfter);
+}
+
+public static AccountTransaction withdrawal(
+        Account account,
+        BigDecimal amount,
+        BigDecimal balanceAfter
+) {
+    return new AccountTransaction(
+            account,
+            "WITHDRAWAL",
+            amount,
+            balanceAfter
+    );
+}
+
+private AccountTransaction(
+        Account account,
+        String transactionType,
+        BigDecimal amount,
+        BigDecimal balanceAfter
+) {
+    this.account = account;
+    this.transactionType = transactionType;
+    this.amount = amount;
+    this.balanceAfter = balanceAfter;
+}
+
 
     @PrePersist
     protected void onCreate() {
