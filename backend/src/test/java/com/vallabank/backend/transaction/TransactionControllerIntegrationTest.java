@@ -225,4 +225,60 @@ private String createAccountForWithdrawal() throws Exception {
     return JsonPath.read(accountResponse, "$.id");
 }
 
+@Test
+void getTransactionsReturnsDepositAndWithdrawal() throws Exception {
+
+    String accountId = createAccountForWithdrawal();
+
+    // Deposito iniziale di 100 euro
+    mockMvc.perform(post("/api/accounts/{id}/deposits", accountId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":100.00}"))
+            .andExpect(status().isCreated());
+
+    // Prelievo di 40 euro
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", accountId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":40.00}"))
+            .andExpect(status().isCreated());
+
+    // Recuperiamo lo storico
+    mockMvc.perform(get("/api/accounts/{id}/transactions", accountId)
+            .param("page", "0")
+            .param("size", "20"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accountId").value(accountId))
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(1))
+            .andExpect(jsonPath("$.page").value(0))
+            .andExpect(jsonPath("$.transactions[0].type").value("WITHDRAWAL"))
+            .andExpect(jsonPath("$.transactions[0].balanceAfter").value(60.0))
+            .andExpect(jsonPath("$.transactions[1].type").value("DEPOSIT"))
+            .andExpect(jsonPath("$.transactions[1].balanceAfter").value(100.0));
+}
+
+@Test
+void getTransactionsReturns404WhenAccountMissing() throws Exception {
+
+    mockMvc.perform(get("/api/accounts/{id}/transactions", UUID.randomUUID()))
+            .andExpect(status().isNotFound())
+            .andExpect(org.springframework.test.web.servlet.result
+                    .MockMvcResultMatchers.handler()
+                    .handlerType(TransactionController.class));
+}
+
+@Test
+void getTransactionsReturns400WhenPaginationInvalid() throws Exception {
+
+    mockMvc.perform(get("/api/accounts/{id}/transactions", UUID.randomUUID())
+            .param("page", "-1")
+            .param("size", "20"))
+            .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/accounts/{id}/transactions", UUID.randomUUID())
+            .param("page", "0")
+            .param("size", "101"))
+            .andExpect(status().isBadRequest());
+}
+
 }

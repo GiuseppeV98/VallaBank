@@ -52,4 +52,22 @@ public class TransactionController {
                 .status(HttpStatus.CREATED)
                 .body(response);
     }
+    
+@GetMapping("/{id}/transactions")
+public ResponseEntity<TransactionHistoryResponse> getTransactions(
+        @PathVariable UUID id,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+) {
+
+    TransactionHistoryResponse response =
+            transactionService.getAccountTransactions(
+                    id,
+                    page,
+                    size
+            );
+
+    return ResponseEntity.ok(response);
+}
+
 }

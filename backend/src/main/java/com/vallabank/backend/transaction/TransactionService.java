@@ -8,6 +8,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import java.util.List;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -130,6 +134,69 @@ public WithdrawalResponse withdraw(UUID accountId, BigDecimal amount) {
             transaction.getAmount(),
             transaction.getBalanceAfter(),
             transaction.getCreatedAt()
+    );
+}
+
+@Transactional(readOnly = true)
+public TransactionHistoryResponse getAccountTransactions(
+        UUID accountId,
+        int page,
+        int size
+) {
+
+    // 1. Validazione dei parametri di paginazione
+    if (page < 0 || size < 1 || size > 100) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Invalid pagination parameters"
+        );
+    }
+
+    // 2. Verifica che il conto esista
+    if (!accountRepository.existsById(accountId)) {
+        throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Account not found"
+        );
+    }
+
+    // 3. Definizione della pagina e ordinamento
+    PageRequest pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(
+                    Sort.Order.desc("createdAt"),
+                    Sort.Order.desc("id")
+            )
+    );
+
+    // 4. Recupero dei movimenti da PostgreSQL
+    Page<AccountTransaction> result =
+            transactionRepository.findByAccount_Id(
+                    accountId,
+                    pageable
+            );
+
+    // 5. Conversione Entity -> DTO
+    List<TransactionItemResponse> transactions =
+            result.getContent().stream()
+                    .map(transaction -> new TransactionItemResponse(
+                            transaction.getId(),
+                            transaction.getTransactionType(),
+                            transaction.getAmount(),
+                            transaction.getBalanceAfter(),
+                            transaction.getCreatedAt()
+                    ))
+                    .toList();
+
+    // 6. Costruzione della risposta
+    return new TransactionHistoryResponse(
+            accountId,
+            transactions,
+            page,
+            size,
+            result.getTotalElements(),
+            result.getTotalPages()
     );
 }
 
