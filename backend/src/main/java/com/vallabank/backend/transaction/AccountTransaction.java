@@ -30,7 +30,10 @@ public class AccountTransaction {
     @Column(name = "balance_after", nullable = false,
             precision = 19, scale = 2)
     private BigDecimal balanceAfter;
-
+    
+    @Column(name = "transfer_id")
+    private UUID transferId;
+    
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -42,7 +45,7 @@ public AccountTransaction(
         BigDecimal amount,
         BigDecimal balanceAfter
 ) {
-    this(account, "DEPOSIT", amount, balanceAfter);
+    this(account, "DEPOSIT", amount, balanceAfter, null);
 }
 
 public static AccountTransaction withdrawal(
@@ -51,10 +54,31 @@ public static AccountTransaction withdrawal(
         BigDecimal balanceAfter
 ) {
     return new AccountTransaction(
-            account,
-            "WITHDRAWAL",
-            amount,
-            balanceAfter
+            account, "WITHDRAWAL", amount, balanceAfter, null
+    );
+}
+
+public static AccountTransaction transferOut(
+        Account account,
+        BigDecimal amount,
+        BigDecimal balanceAfter,
+        UUID transferId
+) {
+    return new AccountTransaction(
+            account, "TRANSFER_OUT",
+            amount, balanceAfter, transferId
+    );
+}
+
+public static AccountTransaction transferIn(
+        Account account,
+        BigDecimal amount,
+        BigDecimal balanceAfter,
+        UUID transferId
+) {
+    return new AccountTransaction(
+            account, "TRANSFER_IN",
+            amount, balanceAfter, transferId
     );
 }
 
@@ -62,12 +86,15 @@ private AccountTransaction(
         Account account,
         String transactionType,
         BigDecimal amount,
-        BigDecimal balanceAfter
+        BigDecimal balanceAfter,
+        UUID transferId
 ) {
     this.account = account;
     this.transactionType = transactionType;
     this.amount = amount;
     this.balanceAfter = balanceAfter;
+    this.transferId = transferId;
+    
 }
 
 
@@ -98,5 +125,8 @@ private AccountTransaction(
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+    public UUID getTransferId(){
+        return transferId;
     }
 }

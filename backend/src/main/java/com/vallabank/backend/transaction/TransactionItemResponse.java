@@ -10,6 +10,7 @@ public record TransactionItemResponse(
         String type,
         BigDecimal amount,
         BigDecimal balanceAfter,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        UUID transferId
 ) {
 }

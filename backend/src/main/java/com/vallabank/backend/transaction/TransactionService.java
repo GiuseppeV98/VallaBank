@@ -70,14 +70,16 @@ public class TransactionService {
         transactionRepository.save(transaction);
 
         // 7. Preparazione della risposta
-        return new DepositResponse(
-                transaction.getId(),
-                account.getId(),
-                transaction.getTransactionType(),
-                transaction.getAmount(),
-                transaction.getBalanceAfter(),
-                transaction.getCreatedAt()
-        );
+
+return new DepositResponse(
+        transaction.getId(),
+        account.getId(),
+        transaction.getTransactionType(),
+        transaction.getAmount(),
+        transaction.getBalanceAfter(),
+        transaction.getCreatedAt()
+);
+
     }
     
 @Transactional
@@ -178,16 +180,19 @@ public TransactionHistoryResponse getAccountTransactions(
             );
 
     // 5. Conversione Entity -> DTO
-    List<TransactionItemResponse> transactions =
-            result.getContent().stream()
-                    .map(transaction -> new TransactionItemResponse(
-                            transaction.getId(),
-                            transaction.getTransactionType(),
-                            transaction.getAmount(),
-                            transaction.getBalanceAfter(),
-                            transaction.getCreatedAt()
-                    ))
-                    .toList();
+    
+List<TransactionItemResponse> transactions =
+        result.getContent().stream()
+                .map(transaction -> new TransactionItemResponse(
+                        transaction.getId(),
+                        transaction.getTransactionType(),
+                        transaction.getAmount(),
+                        transaction.getBalanceAfter(),
+                        transaction.getCreatedAt(),
+                        transaction.getTransferId()
+                ))
+                .toList();
+
 
     // 6. Costruzione della risposta
     return new TransactionHistoryResponse(
