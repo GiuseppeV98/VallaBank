@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/transfers")
 public class TransferController {
@@ -19,10 +21,14 @@ public class TransferController {
 
     @PostMapping
     public ResponseEntity<TransferResponse> createTransfer(
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @Valid @RequestBody TransferRequest request
     ) {
 
-        TransferResponse response = transferService.transfer(request);
+        TransferResponse response = transferService.transfer(
+                request,
+                idempotencyKey
+        );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)

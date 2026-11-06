@@ -103,6 +103,7 @@ class TransferControllerIntegrationTest {
 
         // Trasferimento di 150 euro
         String response = mockMvc.perform(post("/api/transfers")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(transferJson(fromId, toId, "150.00")))
                 .andExpect(status().isCreated())
@@ -144,6 +145,7 @@ class TransferControllerIntegrationTest {
         String toId = createAccount(IBAN_B);
 
         mockMvc.perform(post("/api/transfers")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(transferJson(fromId, toId, "100.00")))
                 .andExpect(status().isConflict());
@@ -162,6 +164,7 @@ class TransferControllerIntegrationTest {
         String accountId = createAccount(IBAN_A);
 
         mockMvc.perform(post("/api/transfers")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(transferJson(accountId, accountId, "10.00")))
                 .andExpect(status().isBadRequest());
@@ -173,6 +176,7 @@ class TransferControllerIntegrationTest {
         String fromId = createAccount(IBAN_A);
 
         mockMvc.perform(post("/api/transfers")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(transferJson(
                         fromId, UUID.randomUUID().toString(), "10.00"
@@ -185,6 +189,7 @@ class TransferControllerIntegrationTest {
     void transferReturns400WhenAmountInvalid() throws Exception {
 
         mockMvc.perform(post("/api/transfers")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(transferJson(
                         UUID.randomUUID().toString(),
@@ -193,4 +198,101 @@ class TransferControllerIntegrationTest {
                 )))
                 .andExpect(status().isBadRequest());
     }
+    
+@Test
+void repeatedTransferWithSameKeyExecutesOnlyOnce() throws Exception {
+
+    String fromId = createAccount(IBAN_A);
+    String toId = createAccount(IBAN_B);
+
+    // Saldo iniziale: 100 euro
+    mockMvc.perform(post("/api/accounts/{id}/deposits", fromId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":100.00}"))
+            .andExpect(status().isCreated());
+
+    String key = UUID.randomUUID().toString();
+    String payload = transferJson(fromId, toId, "40.00");
+
+    // Primo bonifico
+    String firstResponse = mockMvc.perform(post("/api/transfers")
+            .header("Idempotency-Key", key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+
+    // Ripetizione identica
+    String secondResponse = mockMvc.perform(post("/api/transfers")
+            .header("Idempotency-Key", key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+
+    String firstId = JsonPath.read(firstResponse, "$.transferId");
+    String secondId = JsonPath.read(secondResponse, "$.transferId");
+
+    assertEquals(firstId, secondId);
+
+    // Il saldo deve essere addebitato solo una volta
+    mockMvc.perform(get("/api/accounts/{id}", fromId))
+            .andExpect(jsonPath("$.balance").value(60.0));
+
+    mockMvc.perform(get("/api/accounts/{id}", toId))
+            .andExpect(jsonPath("$.balance").value(40.0));
+
+    assertEquals(2, transactionRepository.findByTransferId(
+            UUID.fromString(firstId)
+    ).size());
+}
+
+@Test
+void sameKeyWithDifferentAmountReturns409() throws Exception {
+
+    String fromId = createAccount(IBAN_A);
+    String toId = createAccount(IBAN_B);
+
+    mockMvc.perform(post("/api/accounts/{id}/deposits", fromId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":100.00}"))
+            .andExpect(status().isCreated());
+
+    String key = UUID.randomUUID().toString();
+
+    // Primo trasferimento di 40 euro
+    mockMvc.perform(post("/api/transfers")
+            .header("Idempotency-Key", key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(transferJson(fromId, toId, "40.00")))
+            .andExpect(status().isCreated());
+
+    // Stessa chiave, ma importo diverso
+    mockMvc.perform(post("/api/transfers")
+            .header("Idempotency-Key", key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(transferJson(fromId, toId, "30.00")))
+            .andExpect(status().isConflict());
+
+    // Nessun secondo addebito
+    mockMvc.perform(get("/api/accounts/{id}", fromId))
+            .andExpect(jsonPath("$.balance").value(60.0));
+
+    mockMvc.perform(get("/api/accounts/{id}", toId))
+            .andExpect(jsonPath("$.balance").value(40.0));
+}
+
+@Test
+void transferWithoutIdempotencyKeyReturns400() throws Exception {
+
+    mockMvc.perform(post("/api/transfers")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(transferJson(
+                    UUID.randomUUID().toString(),
+                    UUID.randomUUID().toString(),
+                    "10.00"
+            )))
+            .andExpect(status().isBadRequest());
+}
+
 }
