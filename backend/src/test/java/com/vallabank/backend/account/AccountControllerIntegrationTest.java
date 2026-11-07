@@ -18,8 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import org.springframework.security.test.context.support.WithMockUser;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(roles = "CUSTOMER")
 class AccountControllerIntegrationTest {
 
     @Autowired
@@ -49,7 +53,7 @@ void getAccountByIdReturns200WhenExists() throws Exception {
             """.formatted(email);
 
     String customerResponse = mockMvc.perform(
-            post("/api/customers")
+            post("/api/customers").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(customerJson)
     )
@@ -72,7 +76,7 @@ void getAccountByIdReturns200WhenExists() throws Exception {
             """.formatted(customerId, iban);
 
     String accountResponse = mockMvc.perform(
-            post("/api/accounts")
+            post("/api/accounts").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(accountJson)
     )
@@ -111,7 +115,7 @@ void createAccountReturns409WhenIbanAlreadyExists() throws Exception {
             """.formatted(email);
 
     String customerResponse = mockMvc.perform(
-            post("/api/customers")
+            post("/api/customers").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(customerJson)
     )
@@ -135,7 +139,7 @@ String iban = "IT37X0542811101000000000001";
 
     // 3. Creiamo il primo Account
     mockMvc.perform(
-            post("/api/accounts")
+            post("/api/accounts").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(accountJson)
     )
@@ -144,7 +148,7 @@ String iban = "IT37X0542811101000000000001";
 
     // 4. Proviamo a creare nuovamente lo stesso Account
     mockMvc.perform(
-            post("/api/accounts")
+            post("/api/accounts").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(accountJson)
     )
@@ -170,7 +174,7 @@ void createAccountReturns404WhenCustomerMissing() throws Exception {
 
     // 4. Inviamo la POST e verifichiamo la risposta
     mockMvc.perform(
-            post("/api/accounts")
+            post("/api/accounts").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(accountJson)
     )
@@ -180,7 +184,7 @@ void createAccountReturns404WhenCustomerMissing() throws Exception {
 
 @Test
 void createAccountReturns400WhenCustomerIdMissing() throws Exception {
-    mockMvc.perform(post("/api/accounts")
+    mockMvc.perform(post("/api/accounts").with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                     {
@@ -192,7 +196,7 @@ void createAccountReturns400WhenCustomerIdMissing() throws Exception {
 
 @Test
 void createAccountReturns400WhenIbanMissing() throws Exception {
-    mockMvc.perform(post("/api/accounts")
+    mockMvc.perform(post("/api/accounts").with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                     {
@@ -204,7 +208,7 @@ void createAccountReturns400WhenIbanMissing() throws Exception {
 
 @Test
 void createAccountReturns400WhenIbanBlank() throws Exception {
-    mockMvc.perform(post("/api/accounts")
+    mockMvc.perform(post("/api/accounts").with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                     {
@@ -217,7 +221,7 @@ void createAccountReturns400WhenIbanBlank() throws Exception {
 
 @Test
 void createAccountReturns400WhenIbanFormatInvalid() throws Exception {
-    mockMvc.perform(post("/api/accounts")
+    mockMvc.perform(post("/api/accounts").with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                     {
@@ -230,7 +234,7 @@ void createAccountReturns400WhenIbanFormatInvalid() throws Exception {
 
 @Test
 void createAccountReturns400WhenIbanChecksumInvalid() throws Exception {
-    mockMvc.perform(post("/api/accounts")
+    mockMvc.perform(post("/api/accounts").with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                     {

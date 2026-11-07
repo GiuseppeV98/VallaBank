@@ -26,6 +26,8 @@ import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -60,6 +62,8 @@ class TransferConcurrencyIntegrationTest {
 
         // 2. Depositiamo 100 euro sul conto sorgente
         mockMvc.perform(post("/api/accounts/{id}/deposits", source)
+                .with(csrf())
+                .with(user("concurrency-test").roles("CUSTOMER"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"amount\":100.00}"))
                 .andExpect(status().isCreated());
@@ -182,6 +186,8 @@ class TransferConcurrencyIntegrationTest {
 
         String customerResponse = mockMvc.perform(
                 post("/api/customers")
+                        .with(csrf())
+                        .with(user("concurrency-test").roles("CUSTOMER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(customerJson)
         )
@@ -203,6 +209,8 @@ class TransferConcurrencyIntegrationTest {
 
         String accountResponse = mockMvc.perform(
                 post("/api/accounts")
+                        .with(csrf())
+                        .with(user("concurrency-test").roles("CUSTOMER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(accountJson)
         )
@@ -299,6 +307,8 @@ void concurrentRequestsWithSameKeyExecuteTransferOnlyOnce()
 
     // 2. Depositiamo 100 euro sul conto sorgente
     mockMvc.perform(post("/api/accounts/{id}/deposits", source)
+            .with(csrf())
+            .with(user("concurrency-test").roles("CUSTOMER"))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"amount\":100.00}"))
             .andExpect(status().isCreated());

@@ -1,4 +1,3 @@
-
 package com.vallabank.backend.transaction;
 
 import com.jayway.jsonpath.JsonPath;
@@ -10,16 +9,19 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@WithMockUser(roles = "CUSTOMER")
 class TransactionControllerIntegrationTest {
 
     @Autowired
@@ -41,7 +43,7 @@ class TransactionControllerIntegrationTest {
                 """.formatted(UUID.randomUUID());
 
         String customerResponse = mockMvc.perform(
-                post("/api/customers")
+                post("/api/customers").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(customerJson)
         )
@@ -59,7 +61,7 @@ class TransactionControllerIntegrationTest {
                 """.formatted(customerId);
 
         String accountResponse = mockMvc.perform(
-                post("/api/accounts")
+                post("/api/accounts").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(accountJson)
         )
@@ -70,7 +72,7 @@ class TransactionControllerIntegrationTest {
 
         // 3. Effettuiamo il deposito
         String depositResponse = mockMvc.perform(
-                post("/api/accounts/{id}/deposits", accountId)
+                post("/api/accounts/{id}/deposits", accountId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\":100.00}")
         )
@@ -99,7 +101,7 @@ class TransactionControllerIntegrationTest {
     void depositReturns400WhenAmountInvalid() throws Exception {
 
         mockMvc.perform(
-                post("/api/accounts/{id}/deposits", UUID.randomUUID())
+                post("/api/accounts/{id}/deposits", UUID.randomUUID()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\":-10.00}")
         )
@@ -110,7 +112,7 @@ class TransactionControllerIntegrationTest {
     void depositReturns404WhenAccountMissing() throws Exception {
 
         mockMvc.perform(
-                post("/api/accounts/{id}/deposits", UUID.randomUUID())
+                post("/api/accounts/{id}/deposits", UUID.randomUUID()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\":100.00}")
         )
@@ -123,14 +125,14 @@ void withdrawalReturns201AndUpdatesBalance() throws Exception {
     String accountId = createAccountForWithdrawal();
 
     // Depositiamo 100 euro
-    mockMvc.perform(post("/api/accounts/{id}/deposits", accountId)
+    mockMvc.perform(post("/api/accounts/{id}/deposits", accountId).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"amount\":100.00}"))
             .andExpect(status().isCreated());
 
     // Preleviamo 40 euro
     String response = mockMvc.perform(
-            post("/api/accounts/{id}/withdrawals", accountId)
+            post("/api/accounts/{id}/withdrawals", accountId).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\":40.00}")
     )
@@ -158,7 +160,7 @@ void withdrawalReturns409WhenInsufficientFunds() throws Exception {
 
     String accountId = createAccountForWithdrawal();
 
-    mockMvc.perform(post("/api/accounts/{id}/withdrawals", accountId)
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", accountId).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"amount\":50.00}"))
             .andExpect(status().isConflict());
@@ -172,7 +174,7 @@ void withdrawalReturns409WhenInsufficientFunds() throws Exception {
 @Test
 void withdrawalReturns400WhenAmountInvalid() throws Exception {
 
-    mockMvc.perform(post("/api/accounts/{id}/withdrawals", UUID.randomUUID())
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", UUID.randomUUID()).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"amount\":-10.00}"))
             .andExpect(status().isBadRequest());
@@ -181,7 +183,7 @@ void withdrawalReturns400WhenAmountInvalid() throws Exception {
 @Test
 void withdrawalReturns404WhenAccountMissing() throws Exception {
 
-    mockMvc.perform(post("/api/accounts/{id}/withdrawals", UUID.randomUUID())
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", UUID.randomUUID()).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"amount\":20.00}"))
             .andExpect(status().isNotFound());
@@ -198,7 +200,7 @@ private String createAccountForWithdrawal() throws Exception {
             """.formatted(UUID.randomUUID());
 
     String customerResponse = mockMvc.perform(
-            post("/api/customers")
+            post("/api/customers").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(customerJson)
     )
@@ -215,7 +217,7 @@ private String createAccountForWithdrawal() throws Exception {
             """.formatted(customerId);
 
     String accountResponse = mockMvc.perform(
-            post("/api/accounts")
+            post("/api/accounts").with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(accountJson)
     )
@@ -231,13 +233,13 @@ void getTransactionsReturnsDepositAndWithdrawal() throws Exception {
     String accountId = createAccountForWithdrawal();
 
     // Deposito iniziale di 100 euro
-    mockMvc.perform(post("/api/accounts/{id}/deposits", accountId)
+    mockMvc.perform(post("/api/accounts/{id}/deposits", accountId).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"amount\":100.00}"))
             .andExpect(status().isCreated());
 
     // Prelievo di 40 euro
-    mockMvc.perform(post("/api/accounts/{id}/withdrawals", accountId)
+    mockMvc.perform(post("/api/accounts/{id}/withdrawals", accountId).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"amount\":40.00}"))
             .andExpect(status().isCreated());
